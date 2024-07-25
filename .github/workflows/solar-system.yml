@@ -22,11 +22,6 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # - name: Setup NodeJS Version
-    #   uses: actions/setup-node@v3
-    #   with:
-    #     node-version: 20
-
     - name: Cache NPM Dependencies
       uses: actions/cache@v3
       with:
@@ -100,6 +95,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: docker
     environment: development
+    env:
+      NAMESPACE: development
+      REPLICAS: 2
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -115,5 +113,19 @@ jobs:
         method: kubeconfig
         kubeconfig: ${{ secrets.KUBECONFIG }}
 
-    - name: Verify Kubectl Version
-      run: kubectl version --short -o yaml
+    - name: Fetch NGINX Ingress Controller IP
+      id: fetch-ip
+      run: echo "INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" >> $GITHUB_ENV
+
+    - name: Replace Tokens in Manifests
+      uses: cschleiden/replace-tokens@v1
+      with:
+        files: kubernetes/development/*.yaml
+      env:
+        NAMESPACE: ${{ env.NAMESPACE }}
+        REPLICAS: ${{ env.REPLICAS }}
+        IMAGE: ghcr.io/myasin786786/solar-system:${{ github.sha }}
+        INGRESS_IP: ${{ env.INGRESS_IP }}
+
+    - name: Check Replaced Manifests
+      run: cat kubernetes/development/*.yaml
