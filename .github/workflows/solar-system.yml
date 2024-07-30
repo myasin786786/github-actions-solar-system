@@ -136,4 +136,4 @@ jobs:
     needs: dev-deploy
     uses: ./.github/workflows/reusable-workflow.yml
     with:
-      ingress-url: ${{ steps.fetch-ip.outputs.INGRESS_IP }}
+      ingress-url: ${{ env.INGRESS_IP }}
